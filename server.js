@@ -2,15 +2,11 @@
 require("dotenv").config();
 const routes = require("./routes");
 const auth = require("./auth.js");
-const ObjectID = require("mongodb").ObjectID;
 const express = require("express");
 const myDB = require("./connection");
 const fccTesting = require("./freeCodeCamp/fcctesting.js");
 const session = require("express-session");
 const passport = require("passport");
-const LocalStrategy = require("passport-local");
-const { redirect } = require("express/lib/response");
-const bcrypt = require("bcrypt");
 
 const app = express();
 
@@ -42,13 +38,31 @@ myDB(async (client) => {
   //Instanciating routes and auth
   routes(app, myDataBase);
   auth(app, myDataBase);
+
+  // Socket
+  let currentUsers = 0;
+  io.on("connection", (socket) => {
+    console.log("A user has connected");
+    currentUsers++;
+    io.emit("user count", currentUsers);
+
+    socket.on("disconnect", () => {
+      console.log("A user has disconnected !");
+      currentUsers--;
+      io.emit("user count", currentUsers);
+    });
+  });
 }).catch((e) => {
   app.route("/").get((req, res) => {
     res.render("pug", { title: e, message: "Unable to login" });
   });
 });
 
+// Instanciating Socket.io
+const http = require("http").createServer(app);
+const io = require("socket.io")(http);
+
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
+http.listen(PORT, () => {
   console.log("Listening on port " + PORT);
 });
