@@ -12,7 +12,6 @@ const cookieParser = require("cookie-parser");
 const MongoStore = require("connect-mongo")(session);
 const store = new MongoStore({ url: process.env.MONGO_URI });
 
-
 const app = express();
 
 // Setting the view-engine to pug
@@ -49,18 +48,33 @@ myDB(async (client) => {
   // Socket
   let currentUsers = 0;
   io.on("connection", (socket) => {
-    console.log('user ' + socket.request.user.username + ' connected');
+    console.log("user " + socket.request.user.username + " connected");
     currentUsers++;
-    io.emit('user', {
+    io.emit("user", {
       username: socket.request.user.username,
       currentUsers,
-      connected: true
+      connected: true,
+    });
+
+    socket.on("chat message", (message) => {
+      console.log(
+        "A message has been send: ",
+        message + " " + socket.request.user.username
+      );
+      io.emit("chat message", {
+        username: socket.request.user.username,
+        message: message,
+      });
     });
 
     socket.on("disconnect", () => {
-      console.log('user ' + socket.request.user.username + ' disconnected');
+      console.log("user " + socket.request.user.username + " disconnected");
       currentUsers--;
-      io.emit("user count", currentUsers);
+      io.emit("user", {
+        username: socket.request.user.username,
+        currentUsers,
+        connected: false,
+      });
     });
   });
 }).catch((e) => {
